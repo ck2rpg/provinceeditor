@@ -1,0 +1,345 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="pd.css">
+    </head>
+    <body>
+        <style>
+        /* http://meyerweb.com/eric/tools/css/reset/ 
+        v2.0 | 20110126
+        License: none (public domain)
+        */
+
+        html, body, div, span, applet, object, iframe,
+        h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+        a, abbr, acronym, address, big, cite, code,
+        del, dfn, em, img, ins, kbd, q, s, samp,
+        small, strike, strong, sub, sup, tt, var,
+        b, u, i, center,
+        dl, dt, dd, ol, ul, li,
+        fieldset, form, label, legend,
+        table, caption, tbody, tfoot, thead, tr, th, td,
+        article, aside, canvas, details, embed, 
+        figure, figcaption, footer, header, hgroup, 
+        menu, nav, output, ruby, section, summary,
+        time, mark, audio, video {
+            margin: 0;
+            padding: 0;
+            border: 0;
+            font-size: 100%;
+            font: inherit;
+            vertical-align: baseline;
+        }
+        /* HTML5 display-role reset for older browsers */
+        article, aside, details, figcaption, figure, 
+        footer, header, hgroup, menu, nav, section {
+            display: block;
+        }
+        body {
+            line-height: 1;
+        }
+        ol, ul {
+            list-style: none;
+        }
+        blockquote, q {
+            quotes: none;
+        }
+        blockquote:before, blockquote:after,
+        q:before, q:after {
+            content: '';
+            content: none;
+        }
+        table {
+            border-collapse: collapse;
+            border-spacing: 0;
+        }
+        #p {
+            display: "none"
+        }
+
+        #menu {
+            position: fixed;
+            bottom: 0px;
+            left: 0px;
+            background: white;
+            border: 1px solid black;
+        }
+
+        #top-menu {
+            background: lightgray;
+        }
+
+        .menu-button {
+            display: inline-block;
+            margin-left: 10px;
+            margin-right: 10px;
+        }
+
+        .menu-button:hover {
+            cursor: pointer;
+            color: green;
+        }
+
+        </style>
+        <div id="top-menu">
+            <span class="menu-button" id="redrawmap">Draw Map</span>
+            <span class="menu-button" id="upload-defs">Upload Definitions</span>
+            <span class="menu-button" id="save-files">Save Files</span>
+            <span class="menu-button" id="fromscratch">Create Definition File from Scratch (long wait - recommend opening console to see progress)</span>
+            <input type="file" id="fileInput" accept=".csv" style="display: none">
+        </div>
+        <canvas id="pdcanvas" height="4096" width="8192"></canvas>
+        <img id="p" src="provinces.png" style="display: none"></img>
+        <div id="menu">
+            <p>Def. Name: <input id="namebox"></input></p>
+            <p>Def. ID: <input id="defid"></input></p>
+            <!--<p>Localization: <input id="locbox"></input></p>-->
+            <p>Red: <span id="r"></span></p>
+            <p>Green: <span id="g"></span></p>
+            <p>Blue: <span id="b"></span></p>
+            <button id="save-province">Save Province</button>
+        </div>
+        <div id="download-links" style="display: none"></div>
+
+
+        <script>
+let canvas = document.getElementById("pdcanvas");
+const daBom = `\ufeff`
+canvas.style.width = '95vw';  // Example display size
+canvas.style.height = '100vh';  // Example display size
+var ctx = canvas.getContext('2d')
+let img = document.getElementById("p")
+function getMousePos(canvas, evt) {
+    let rect = canvas.getBoundingClientRect();
+    return {
+        x: Math.floor(((evt.clientX - rect.left) / (rect.right - rect.left) * canvas.width)),
+        y: Math.floor(((evt.clientY - rect.top) / (rect.bottom - rect.top) * canvas.height)),
+    };
+}
+
+document.getElementById("redrawmap").onclick = function() {
+    ctx.drawImage(img, 0, 0)
+}
+
+let currentDef;
+canvas.onclick = function(e) {
+    let pos = getMousePos(canvas, e);
+    let output = ctx.getImageData(pos.x, pos.y, 1, 1 )
+    //console.log(output)
+    let r = output.data[0]
+    let g = output.data[1];
+    let b = output.data[2];
+    let found = false;
+    for (let i = 0; i < definitions.length; i++) {
+        currentDef = definitions[i]
+        if (currentDef.r === r && currentDef.g === g && currentDef.b === b) {
+            if (currentDef.name) {
+                document.getElementById("namebox").value = currentDef.name;
+            }
+            
+            if (currentDef.id) {
+                document.getElementById("defid").value = currentDef.id
+            }
+            
+            /*
+            if (currentDef.localization) {
+                document.getElementById("locbox").value = currentDef.localization
+            } else {
+                document.getElementById("locbox").value = ""
+            }
+            */
+            document.getElementById("r").innerHTML = currentDef.r;
+            document.getElementById("g").innerHTML = currentDef.g;
+            document.getElementById("b").innerHTML = currentDef.b;
+            found = true;
+            break;
+        }
+    }
+    if (found === false) {
+        let o = {};
+        o.name = "";
+        o.r = r;
+        o.g = g;
+        o.b = b;
+        o.id = definitions.length;
+        definitions.push(o);
+        currentDef = o;
+        if (currentDef.name) {
+                document.getElementById("namebox").value = currentDef.name;
+        } else {
+            document.getElementById("namebox").value = ""
+        }
+        
+        if (currentDef.id) {
+            document.getElementById("defid").value = currentDef.id
+        }
+        
+        /*
+        if (currentDef.localization) {
+            document.getElementById("locbox").value = currentDef.localization
+        } else {
+            document.getElementById("locbox").value = ""
+        }
+        */
+        document.getElementById("r").innerHTML = currentDef.r;
+        document.getElementById("g").innerHTML = currentDef.g;
+        document.getElementById("b").innerHTML = currentDef.b;
+            
+    }
+}
+
+document.getElementById("save-province").onclick = function() {
+    currentDef.name = document.getElementById("namebox").value
+    //currentDef.localization = document.getElementById("locbox").value
+    currentDef.id = document.getElementById("defid").value
+    currentDef.r = parseInt(document.getElementById("r").innerHTML)
+    currentDef.g = parseInt(document.getElementById("g").innerHTML)
+    currentDef.b = parseInt(document.getElementById("b").innerHTML)
+}
+
+// Variable to hold the lines of your CSV content
+let definitions = [];
+definitions.push(
+    {
+        name: "",
+        id: 0,
+        r: 0,
+        g: 0,
+        b: 0,
+    }
+)
+
+function readCSVFile(file) {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        // Split the file content by newlines to get an array of lines
+        const lines = event.target.result.split(/\r\n|\n/);
+        // Process each line
+        lines.forEach(line => {
+            // Use a regular expression to extract the id, red, green, blue, and name
+            const match = line.match(/^(\d+);(\d+);(\d+);(\d+);([^;]+);/);
+            if (match) {
+                // Create an object with the extracted values and push it into the 'definitions' array
+                const obj = {
+                    id: parseInt(match[1], 10),
+                    r: parseInt(match[2], 10),
+                    g: parseInt(match[3], 10),
+                    b: parseInt(match[4], 10),
+                    name: match[5]
+                };
+                definitions.push(obj);
+            }
+        });
+        console.log(definitions); // Display the objects for verification
+    };
+
+    reader.readAsText(file); // Read the file as text
+}
+
+// Set up an event listener on the file input element
+document.getElementById('fileInput').addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    if (file) {
+        readCSVFile(file);
+    }
+}, false);
+
+document.getElementById("upload-defs").onclick = function() {
+    document.getElementById("fileInput").click()
+}
+
+function sortById(array) {
+    return array.sort((a, b) => a.id - b.id);
+}
+
+function outputDefinitionFile(sortedDef) {
+    let t = `${daBom}`
+    let l = `${daBom}l_english:\n`
+    
+    for (let i = 0; i < sortedDef.length; i++) {
+        let p = sortedDef[i]
+        t += `${p.id};${p.r};${p.g};${p.b};${p.name};x;\n`
+
+        let locName = p.name.toLowerCase()
+        let apost = /'/g
+        let space = /\s/g
+        let dash = /-/g
+        locName = locName.replace(apost, "")
+        locName = locName.replace(space, "_")
+        locName = locName.replace(dash, "_")
+        if (i === 0) {
+
+        } else {
+            l += `  b_${locName}: "${p.name}"\n`
+        }
+        
+    }
+    var data = new Blob([t], {type: 'text/plain'})
+    var url = window.URL.createObjectURL(data);
+    let link = `<a id="definition-download-link" download="definition.csv" style="display: none" href="">Download Province Definitions</a>`
+    document.getElementById("download-links").innerHTML += `${link}`;
+    document.getElementById('definition-download-link').href = url
+    document.getElementById('definition-download-link').click()
+
+    var data2 = new Blob([l], {type: 'text/yaml'})
+    var url2 = window.URL.createObjectURL(data2);
+    let link2 = `<a id="loc-download-link" download="province_titles.yml" style="display: none" href="">Download Province Title Localization</a>`
+    document.getElementById("download-links").innerHTML += `${link2}`;
+    document.getElementById('loc-download-link').href = url2
+    document.getElementById('loc-download-link').click()
+}
+
+function outputLocalization(sortedDef) {
+    let t = `${daBom}`
+    t += `l_english:\n`
+    for (let i = 0; i < sortedDef.length; i++) {
+        let p = sortedDef[i]
+    }
+}
+
+function preAssignAll() {
+    let pixels = ctx.getImageData(0, 0, 8192, 4096);
+    let count = 0;
+    let arr = [];
+    let lastR;
+    let lastG;
+    let lastB;
+    for (let i = 0; i < 8192; i++) {
+        console.log(`SCANNING Column ${i} out of 8192`)
+        for (let j = 0; j < 4096; j++) {
+            
+            let r = pixels.data[count]
+            let g = pixels.data[count + 1]
+            let b = pixels.data[count + 2]
+            count += 4
+            if (r === lastR && g === lastG && b === lastB) {
+                //do nothing because you just checked it
+            } else {
+                let t = `${r};${g};${b}`
+                if (arr.indexOf(t) === -1) {
+                    arr.push(t)
+                    let o = {};
+                    o.name = "";
+                    o.r = r;
+                    o.g = g;
+                    o.b = b;
+                    definitions.push(o)
+                    o.id = definitions.length - 1;
+                }
+            }
+            
+        }
+    }
+}
+
+document.getElementById('save-files').onclick = function() {
+    let sortedDef = sortById(definitions);
+    outputDefinitionFile(sortedDef);
+}
+
+document.getElementById("fromscratch").onclick = function() {
+    preAssignAll()
+}
+
+        </script>
+    </body>
+</html>
